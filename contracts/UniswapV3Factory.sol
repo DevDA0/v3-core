@@ -8,13 +8,15 @@ import './NoDelegateCall.sol';
 
 import './UniswapV3Pool.sol';
 
-import './interfaces/ILSP7Minimal.sol';
+import { IERC165 } from "./interfaces/IERC165.sol";
 
 /// @title Canonical Uniswap V3 factory
 /// @notice Deploys Uniswap V3 pools and manages ownership and control over pool protocol fees
 contract UniswapV3Factory is IUniswapV3Factory, UniswapV3PoolDeployer, NoDelegateCall {
     /// @inheritdoc IUniswapV3Factory
     address public override owner;
+    
+    bytes4 private constant _INTERFACEID_LSP7 = 0xb3c4928f;
 
     /// @inheritdoc IUniswapV3Factory
     mapping(uint24 => int24) public override feeAmountTickSpacing;
@@ -33,15 +35,24 @@ contract UniswapV3Factory is IUniswapV3Factory, UniswapV3PoolDeployer, NoDelegat
         emit FeeAmountEnabled(10000, 200);
     }
 
+    function isLSP7Token(address token) public view returns (bool) {
+        // Check if the token contract implements IERC165
+        if (!IERC165(token).supportsInterface(type(IERC165).interfaceId)) {
+            return false;
+        }
+        // Check if the token contract implements the LSP7 interface
+        return IERC165(token).supportsInterface(_INTERFACEID_LSP7);
+    }
+
     /// @inheritdoc IUniswapV3Factory
     function createPool(
         address tokenA,
         address tokenB,
         uint24 fee
     ) external override noDelegateCall returns (address pool) {
-        // Check for LSP7 compliance:
-        require(ILSP7Minimal(tokenA).supportsInterface(type(ILSP7Minimal)._INTERFACEID_LSP7), "Token A is not LSP7");
-        require(ILSP7Minimal(tokenB).supportsInterface(type(ILSP7Minimal)._INTERFACEID_LSP7), "Token B is not LSP7");
+        /// @notice check if tokenA and tokenB are LSP7 tokens
+        require(isLSP7Token(tokenA), "TokenA is not LSP7 token");
+        require(isLSP7Token(tokenB), "TokenB is not LSP7 token");
 
         require(tokenA != tokenB);
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);

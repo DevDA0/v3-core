@@ -28,7 +28,6 @@ library TransferHelper {
             data
         ));
 
-        // Event-based check:
-        require(success && emit Transfer(from, to, value, force, data), 'TF');
+        require(success, 'TF');
     }
 }
