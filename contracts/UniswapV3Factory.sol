@@ -8,6 +8,8 @@ import './NoDelegateCall.sol';
 
 import './UniswapV3Pool.sol';
 
+import './interfaces/ILSP7Minimal.sol';
+
 /// @title Canonical Uniswap V3 factory
 /// @notice Deploys Uniswap V3 pools and manages ownership and control over pool protocol fees
 contract UniswapV3Factory is IUniswapV3Factory, UniswapV3PoolDeployer, NoDelegateCall {
@@ -37,6 +39,10 @@ contract UniswapV3Factory is IUniswapV3Factory, UniswapV3PoolDeployer, NoDelegat
         address tokenB,
         uint24 fee
     ) external override noDelegateCall returns (address pool) {
+        // Check for LSP7 compliance:
+        require(ILSP7Minimal(tokenA).supportsInterface(type(ILSP7Minimal)._INTERFACEID_LSP7), "Token A is not LSP7");
+        require(ILSP7Minimal(tokenB).supportsInterface(type(ILSP7Minimal)._INTERFACEID_LSP7), "Token B is not LSP7");
+
         require(tokenA != tokenB);
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0));

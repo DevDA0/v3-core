@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.0;
 
-import '../interfaces/IERC20Minimal.sol';
+import '../interfaces/ILSP7Minimal.sol';
 
 /// @title TransferHelper
 /// @notice Contains helper methods for interacting with ERC20 tokens that do not consistently return true/false
@@ -13,11 +13,22 @@ library TransferHelper {
     /// @param value The value of the transfer
     function safeTransfer(
         address token,
+        address from,
         address to,
-        uint256 value
+        uint256 value,
+        bool force,
+        bytes memory data
     ) internal {
-        (bool success, bytes memory data) =
-            token.call(abi.encodeWithSelector(IERC20Minimal.transfer.selector, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TF');
+        (bool success, ) = token.call(abi.encodeWithSelector(
+            ILSP7Minimal.transfer.selector,
+            from,
+            to,
+            value,
+            force,
+            data
+        ));
+
+        // Event-based check:
+        require(success && emit Transfer(from, to, value, force, data), 'TF');
     }
 }
