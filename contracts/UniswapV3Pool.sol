@@ -139,7 +139,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     /// check
     function balance0() private view returns (uint256) {
         (bool success, bytes memory data) =
-            token0.staticcall(abi.encodeWithSelector(IERC20Minimal.balanceOf.selector, address(this)));
+            token0.staticcall(abi.encodeWithSelector(ILSP7Minimal.balanceOf.selector, address(this)));
         require(success && data.length >= 32);
         return abi.decode(data, (uint256));
     }
@@ -149,7 +149,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     /// check
     function balance1() private view returns (uint256) {
         (bool success, bytes memory data) =
-            token1.staticcall(abi.encodeWithSelector(IERC20Minimal.balanceOf.selector, address(this)));
+            token1.staticcall(abi.encodeWithSelector(ILSP7Minimal.balanceOf.selector, address(this)));
         require(success && data.length >= 32);
         return abi.decode(data, (uint256));
     }
@@ -502,12 +502,13 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
 
         if (amount0 > 0) {
             position.tokensOwed0 -= amount0;
-            TransferHelper.safeTransfer(token0, recipient, amount0);
+            TransferHelper.safeTransfer(token0, address(this), recipient, amount0, true, "");
         }
         if (amount1 > 0) {
             position.tokensOwed1 -= amount1;
-            TransferHelper.safeTransfer(token1, recipient, amount1);
+            TransferHelper.safeTransfer(token1, address(this), recipient, amount1, true, "");
         }
+
 
         emit Collect(msg.sender, recipient, tickLower, tickUpper, amount0, amount1);
     }
@@ -770,13 +771,17 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
 
         // do the transfers and collect payment
         if (zeroForOne) {
-            if (amount1 < 0) TransferHelper.safeTransfer(token1, recipient, uint256(-amount1));
+            if (amount1 < 0) {
+                TransferHelper.safeTransfer(token1, address(this), recipient, uint256(-amount1), true, "");
+            }
 
             uint256 balance0Before = balance0();
             IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
             require(balance0Before.add(uint256(amount0)) <= balance0(), 'IIA');
         } else {
-            if (amount0 < 0) TransferHelper.safeTransfer(token0, recipient, uint256(-amount0));
+            if (amount0 < 0) {
+                TransferHelper.safeTransfer(token0, address(this), recipient, uint256(-amount0), true, "");
+            }
 
             uint256 balance1Before = balance1();
             IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
@@ -802,8 +807,8 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         uint256 balance0Before = balance0();
         uint256 balance1Before = balance1();
 
-        if (amount0 > 0) TransferHelper.safeTransfer(token0, recipient, amount0);
-        if (amount1 > 0) TransferHelper.safeTransfer(token1, recipient, amount1);
+        if (amount0 > 0) TransferHelper.safeTransfer(token0, address(this), recipient, amount0, true, "");
+        if (amount1 > 0) TransferHelper.safeTransfer(token1, address(this), recipient, amount1, true, "");
 
         IUniswapV3FlashCallback(msg.sender).uniswapV3FlashCallback(fee0, fee1, data);
 
@@ -854,14 +859,12 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         amount1 = amount1Requested > protocolFees.token1 ? protocolFees.token1 : amount1Requested;
 
         if (amount0 > 0) {
-            if (amount0 == protocolFees.token0) amount0--; // ensure that the slot is not cleared, for gas savings
             protocolFees.token0 -= amount0;
-            TransferHelper.safeTransfer(token0, recipient, amount0);
+            TransferHelper.safeTransfer(token0, address(this), recipient, amount0, true, "");
         }
         if (amount1 > 0) {
-            if (amount1 == protocolFees.token1) amount1--; // ensure that the slot is not cleared, for gas savings
             protocolFees.token1 -= amount1;
-            TransferHelper.safeTransfer(token1, recipient, amount1);
+            TransferHelper.safeTransfer(token1, address(this), recipient, amount1, true, "");
         }
 
         emit CollectProtocol(msg.sender, recipient, amount0, amount1);
